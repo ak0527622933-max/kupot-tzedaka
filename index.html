@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>ניהול קופות צדקה</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="קופות צדקה">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="topbar-inner">
+    <button id="backBtn" class="icon-btn hidden" aria-label="חזרה">›</button>
+    <h1 id="pageTitle">לוח בקרה</h1>
+    <div class="topbar-actions">
+      <span id="syncBadge" class="sync-badge" title="מצב סנכרון"></span>
+    </div>
+  </div>
+</header>
+
+<main id="view" aria-live="polite"></main>
+
+<nav id="tabbar">
+  <a href="#/dashboard" data-tab="dashboard">
+    <svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>
+    <span>בקרה</span>
+  </a>
+  <a href="#/collect" data-tab="collect">
+    <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg>
+    <span>אסיפה</span>
+  </a>
+  <a href="#/boxes" data-tab="boxes">
+    <svg viewBox="0 0 24 24"><path d="M4 8h16v12H4zM4 8l2-4h12l2 4M12 4v16"/></svg>
+    <span>קופות</span>
+  </a>
+  <a href="#/reports" data-tab="reports">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+    <span>דוחות</span>
+  </a>
+  <a href="#/settings" data-tab="settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
+    <span>הגדרות</span>
+  </a>
+</nav>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script src="js/store.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/views.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
