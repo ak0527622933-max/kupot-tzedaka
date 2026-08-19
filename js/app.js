@@ -87,6 +87,15 @@ const App = (() => {
     render();
     UI.updateSyncBadge(Sync.getStatus());
     registerServiceWorker();
+
+    // בנייד, כשהאפליקציה עוברת לרקע, הדפדפן משהה טיימרים (כולל בדיקת
+    // הסנכרון כל דקה). לכן מסנכרנים שוב באופן יזום בכל פעם שחוזרים
+    // למסך — אחרת רואים נתונים ישנים עד שרעננים ידנית
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && Sync.isConfigured()) {
+        Sync.syncNow(false);
+      }
+    });
   }
 
   function registerServiceWorker() {

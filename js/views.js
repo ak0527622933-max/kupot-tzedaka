@@ -629,7 +629,10 @@ const Views = (() => {
           <button class="btn block" id="cloudTestBtn">בדיקת חיבור</button>
           <button class="btn primary block" id="cloudSaveBtn">שמירה והפעלה</button>
         </div>
-        ${s.cloud.enabled ? `<button class="btn danger sm mt" id="cloudDisableBtn">ניתוק סנכרון</button>` : ''}
+        ${s.cloud.enabled ? `
+          <button class="btn block mt" id="cloudSyncNowBtn">סנכרון עכשיו</button>
+          <button class="btn danger sm mt" id="cloudDisableBtn">ניתוק סנכרון</button>
+        ` : ''}
       </div>
 
       <div class="section-title">גיבוי ושחזור</div>
@@ -702,6 +705,12 @@ const Views = (() => {
       Store.save();
       UI.toast('הסנכרון הופעל, מתחיל...', 'ok');
       Sync.syncNow(true);
+      App.rerender();
+    });
+
+    const syncNowBtn = root.querySelector('#cloudSyncNowBtn');
+    if (syncNowBtn) syncNowBtn.addEventListener('click', async () => {
+      await Sync.syncNow(true);
       App.rerender();
     });
 
