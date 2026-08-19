@@ -86,7 +86,7 @@ const App = (() => {
     backBtn.addEventListener('click', () => history.back());
     render();
     UI.updateSyncBadge(Sync.getStatus());
-    registerServiceWorker();
+    removeOldServiceWorker();
 
     // בנייד, כשהאפליקציה עוברת לרקע, הדפדפן משהה טיימרים (כולל בדיקת
     // הסנכרון כל דקה). לכן מסנכרנים שוב באופן יזום בכל פעם שחוזרים
@@ -98,22 +98,18 @@ const App = (() => {
     });
   }
 
-  function registerServiceWorker() {
+  /** מסיר כל Service Worker ומטמון שנשארו ממכשירים שהיו רשומים
+   * בגרסאות קודמות — הם היו הגורם לכך שעדכוני קוד "לא תפסו".
+   * מעכשיו אין Service Worker בכלל: קבצי הקוד נטענים ישירות מהרשת
+   * עם ?v= בשם הקובץ, כך שכל עדכון תמיד מגיע מיד, בלי מטמון באמצע */
+  function removeOldServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-
-    // כשגרסה חדשה של האפליקציה נכנסת לתוקף ברקע, מרעננים את הדף
-    // פעם אחת לבד — כך שאף אחד לא צריך לזכור לעשות רענון קשה ידני
-    let reloadedForUpdate = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloadedForUpdate) return;
-      reloadedForUpdate = true;
-      location.reload();
-    });
-
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      // בודקים מיד אם יש גרסה חדשה זמינה, לא רק מחכים לבדיקה הבאה של הדפדפן
-      reg.update().catch(() => {});
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.unregister());
     }).catch(() => {});
+    if (window.caches) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {});
+    }
   }
 
   return { init, render, rerender, currentRoute };
