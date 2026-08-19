@@ -54,6 +54,15 @@ const Sync = (() => {
 
   const TABLES = ['holders', 'boxes', 'collectors', 'collections'];
 
+  /** משווה שני תאריכי ISO כתאריכים אמיתיים, לא כטקסט — Supabase
+   * מחזיר "...175+00:00" בעוד שהמכשיר יוצר "...175Z", וזה אותו רגע
+   * בדיוק אבל השוואת טקסט פשוטה הייתה עלולה "לבלוע" עדכון מהענן */
+  function isNewer(a, b) {
+    const ta = a ? new Date(a).getTime() : 0;
+    const tb = b ? new Date(b).getTime() : 0;
+    return ta > tb;
+  }
+
   /** דוחף רשומות מקומיות שהשתנו מאז lastPush */
   async function push() {
     if (!isConfigured()) return;
@@ -100,7 +109,7 @@ const Sync = (() => {
           db[t].push(row);
           byId.set(row.id, row);
           changed = true;
-        } else if ((row.updated_at || '') > (cur.updated_at || '')) {
+        } else if (isNewer(row.updated_at, cur.updated_at)) {
           Object.assign(cur, row);
           changed = true;
         }
@@ -111,7 +120,7 @@ const Sync = (() => {
     const remoteSettings = await req('/rest/v1/app_settings?id=eq.main&select=*');
     if (Array.isArray(remoteSettings) && remoteSettings[0]) {
       const r = remoteSettings[0];
-      if ((r.updated_at || '') > (db.settings.settingsUpdatedAt || '')) {
+      if (isNewer(r.updated_at, db.settings.settingsUpdatedAt)) {
         db.settings.orgName = r.org_name || '';
         db.settings.currency = r.currency || '₪';
         db.settings.reminderDays = r.reminder_days || 90;
