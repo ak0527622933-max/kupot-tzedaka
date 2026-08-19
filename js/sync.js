@@ -38,12 +38,18 @@ const Sync = (() => {
         ...(opts.headers || {})
       }
     });
+    const bodyText = await res.text().catch(() => '');
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      throw new Error(`שגיאת שרת ${res.status}: ${body.slice(0, 200)}`);
+      throw new Error(`שגיאת שרת ${res.status}: ${bodyText.slice(0, 200)}`);
     }
-    if (res.status === 204) return null;
-    return res.json();
+    // בקשות עם "Prefer: return=minimal" (למשל הדחיפה שלנו) מחזירות גוף
+    // ריק גם כשהפעולה הצליחה — לא ננסה לפרש JSON ממחרוזת ריקה
+    if (!bodyText) return null;
+    try {
+      return JSON.parse(bodyText);
+    } catch (e) {
+      throw new Error('תשובה לא תקינה מהשרת');
+    }
   }
 
   const TABLES = ['holders', 'boxes', 'collectors', 'collections'];
