@@ -230,7 +230,7 @@ const Views = (() => {
   }
 
   function boxListHTML() {
-    const list = Store.boxes().slice().sort((a, b) => (a.serial||'').localeCompare(b.serial||'', 'he'));
+    const list = Store.boxes().slice().sort((a, b) => (a.serial||'').localeCompare(b.serial||'', 'he', { numeric: true }));
     if (!list.length) return emptyState('📦', 'אין עדיין קופות', 'לחצו על + כדי להוסיף קופה ראשונה');
     const items = list.map(b => {
       const h = b.holder_id ? Store.holder(b.holder_id) : null;
