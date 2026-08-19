@@ -673,7 +673,7 @@ const Views = (() => {
       s.orgName = root.querySelector('#setOrgName').value.trim();
       s.currency = root.querySelector('#setCurrency').value.trim() || '₪';
       s.reminderDays = Number(root.querySelector('#setReminder').value) || 90;
-      Store.save();
+      Store.touchOrgSettings();
       UI.toast('ההגדרות נשמרו', 'ok');
     });
 

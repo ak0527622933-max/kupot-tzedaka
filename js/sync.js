@@ -67,6 +67,21 @@ const Sync = (() => {
         body: JSON.stringify(rows)
       });
     }
+    // הגדרות כלליות (שם ארגון, מטבע, ימי תזכורת) — שורה בודדת משותפת
+    const s = db.settings;
+    if (s.settingsUpdatedAt) {
+      await req('/rest/v1/app_settings?on_conflict=id', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: JSON.stringify([{
+          id: 'main',
+          org_name: s.orgName,
+          currency: s.currency,
+          reminder_days: s.reminderDays,
+          updated_at: s.settingsUpdatedAt
+        }])
+      });
+    }
     db.meta.lastPush = Store.nowISO();
   }
 
@@ -91,6 +106,20 @@ const Sync = (() => {
         }
       }
     }
+
+    // מיזוג הגדרות כלליות משותפות
+    const remoteSettings = await req('/rest/v1/app_settings?id=eq.main&select=*');
+    if (Array.isArray(remoteSettings) && remoteSettings[0]) {
+      const r = remoteSettings[0];
+      if ((r.updated_at || '') > (db.settings.settingsUpdatedAt || '')) {
+        db.settings.orgName = r.org_name || '';
+        db.settings.currency = r.currency || '₪';
+        db.settings.reminderDays = r.reminder_days || 90;
+        db.settings.settingsUpdatedAt = r.updated_at;
+        changed = true;
+      }
+    }
+
     db.meta.lastPull = Store.nowISO();
     return changed;
   }

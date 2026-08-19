@@ -20,9 +20,14 @@ const Store = (() => {
       currency: '₪',
       reminderDays: 90,     // אחרי כמה ימים קופה נחשבת "ממתינה"
       nextReceipt: 1,
-      cloud: { url: '', key: '', enabled: false },
+      cloud: {
+        url: 'https://mnkjgugztrqqfxxqajne.supabase.co',
+        key: 'sb_publishable_0MdNfJbh-fYiGOUgovHbQg_3UpYX6Oe',
+        enabled: true
+      },
       deviceName: '',
-      lastBackupExport: null
+      lastBackupExport: null,
+      settingsUpdatedAt: null // תאריך עדכון אחרון של שם הארגון/מטבע/ימי תזכורת, לצורך סנכרון
     },
     meta: { lastPull: null, lastPush: null }
   };
@@ -132,6 +137,12 @@ const Store = (() => {
 
   function markBackupExported() {
     db.settings.lastBackupExport = nowISO();
+    save();
+  }
+
+  /** מסמן ששם הארגון/מטבע/ימי תזכורת השתנו, כדי ש-sync.js ידע לדחוף אותם */
+  function touchOrgSettings() {
+    db.settings.settingsUpdatedAt = nowISO();
     save();
   }
 
@@ -471,6 +482,6 @@ const Store = (() => {
     collections, collectionsFor, collectionsForHolder, saveCollection, deleteCollection,
     lastCollectionDate, daysSince, dueBoxes, totalBetween, monthlyTotals, unsettledByCollector,
     exportJSON, importJSON, exportCSV, resetAll, seedDemo,
-    daysSinceBackup, markBackupExported
+    daysSinceBackup, markBackupExported, touchOrgSettings
   };
 })();
