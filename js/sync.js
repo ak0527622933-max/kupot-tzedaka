@@ -130,7 +130,7 @@ const Sync = (() => {
   function init() {
     if (isConfigured()) {
       syncNow(false);
-      setInterval(() => syncNow(false), 60000);
+      setInterval(() => syncNow(false), 15000);
     } else {
       setStatus('off');
     }
