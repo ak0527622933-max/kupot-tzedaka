@@ -4,7 +4,7 @@
    את קבצי האפליקציה עצמם כדי שהיא תיפתח גם בלי אינטרנט.
    ========================================================== */
 
-const CACHE_NAME = 'kupot-cache-v1';
+const CACHE_NAME = 'kupot-cache-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -45,16 +45,16 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
+  // "רשת קודם" — תמיד מנסים להביא את הגרסה העדכנית מהאינטרנט,
+  // ורק אם אין חיבור בכלל נופלים לגרסה השמורה. כך עדכוני קוד
+  // מגיעים מיד במקום להיתקע על גרסה ישנה שנשמרה במטמון
   event.respondWith(
-    caches.match(req).then(cached => {
-      const fetchPromise = fetch(req).then(res => {
-        if (res && res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(req).then(res => {
+      if (res && res.status === 200) {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
+      }
+      return res;
+    }).catch(() => caches.match(req))
   );
 });
