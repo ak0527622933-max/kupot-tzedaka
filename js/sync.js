@@ -181,8 +181,13 @@ const Sync = (() => {
     if (!isConfigured()) { setStatus('off'); return; }
     setStatus('syncing');
     try {
-      await push();
+      // חשוב: קודם מושכים (pull), ורק אחר-כך דוחפים (push). אם מכשיר
+      // עם עותק מקומי מיושן היה דוחף קודם, הוא היה עלול לדרוס בענן
+      // שינוי חדש יותר שנעשה במכשיר אחר (למשל למחוק "מחיקה" של רשומה)
+      // — כי הדחיפה עצמה לא בודקת תאריכים מול הענן, רק כותבת. מושכים
+      // קודם כדי שהמכשיר "ילמד" קודם מה חדש יותר, ורק אז ישדר בחזרה
       const changedData = await pull();
+      await push();
       const changedSettings = await syncSettings();
       const changed = changedData || changedSettings;
       localStorage.setItem('kupot_db_v1', JSON.stringify(Store.data()));
