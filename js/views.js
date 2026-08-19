@@ -337,8 +337,7 @@ const Views = (() => {
     const histItems = history.length ? history.map(c => {
       const outcomeLabel = { collected: 'נאסף', no_answer: 'לא היו בבית', refused: 'סירבו', empty: 'ריקה' }[c.outcome] || c.outcome;
       const pillKind = c.outcome === 'collected' ? 'ok' : (c.outcome === 'refused' ? 'danger' : '');
-      const clickable = c.outcome === 'collected' && c.receipt_number;
-      return `<li class="${clickable ? '' : 'nolink'}" ${clickable ? `data-receipt="${c.id}"` : ''}>
+      return `<li data-entry="${c.id}">
         <div class="avatar ${pillKind || ''}">${fmtDateShort(c.date)}</div>
         <div class="li-main">
           <div class="li-title">${c.outcome === 'collected' ? fmtMoney(c.amount) : outcomeLabel}</div>
@@ -393,24 +392,28 @@ const Views = (() => {
   }
 
   /** מציג קבלה מעוצבת עם אפשרות שיתוף, עבור אסיפה שכבר קיבלה מספר קבלה */
-  function openReceiptView(collectionId) {
+  /** מציג פרטי אסיפה בודדת מההיסטוריה — קבלה מעוצבת אם יש, ותמיד
+   * עם אפשרות למחוק את הרשומה הספציפית הזו */
+  function openHistoryEntryView(collectionId) {
     const c = Store.collections().find(x => x.id === collectionId);
     if (!c) return;
     const b = Store.box(c.box_id);
     const h = b && b.holder_id ? Store.holder(b.holder_id) : null;
     const collector = c.collector_id ? Store.collector(c.collector_id) : null;
     const org = Store.data().settings.orgName || 'קבלה על תרומה';
+    const outcomeLabel = { collected: 'נאסף כסף', no_answer: 'לא היו בבית', refused: 'סירבו', empty: 'קופה ריקה' }[c.outcome] || c.outcome;
+    const hasReceipt = c.outcome === 'collected' && c.receipt_number;
 
-    const shareText =
+    const shareText = hasReceipt ?
       `${org}\n` +
       `קבלה מס' ${c.receipt_number}\n` +
       `תאריך: ${fmtDate(c.date)}\n` +
       (h ? `מאת: ${h.name}\n` : '') +
       `סכום: ${fmtMoney(c.amount)}\n` +
       (b ? `קופה: ${b.serial}\n` : '') +
-      (collector ? `נאסף ע"י: ${collector.name}\n` : '');
+      (collector ? `נאסף ע"י: ${collector.name}\n` : '') : '';
 
-    const el = UI.openModal(`
+    const body = hasReceipt ? `
       <div class="receipt-card">
         <div class="receipt-org">${esc(org)}</div>
         <div class="receipt-num">קבלה מס' ${c.receipt_number}</div>
@@ -422,13 +425,27 @@ const Views = (() => {
           ${collector ? `<div class="kv"><span class="k">נאסף ע"י</span><span class="v">${esc(collector.name)}</span></div>` : ''}
         </div>
       </div>
+    ` : `
+      <h2>פרטי ביקור</h2>
+      <div class="card card-pad">
+        <div class="kv"><span class="k">תוצאה</span><span class="v">${esc(outcomeLabel)}</span></div>
+        <div class="kv"><span class="k">תאריך</span><span class="v">${fmtDate(c.date)}</span></div>
+        ${collector ? `<div class="kv"><span class="k">מתרים</span><span class="v">${esc(collector.name)}</span></div>` : ''}
+        ${c.notes ? `<div class="kv"><span class="k">הערות</span><span class="v">${esc(c.notes)}</span></div>` : ''}
+      </div>
+    `;
+
+    const el = UI.openModal(`
+      ${body}
       <div class="btn-row mt">
         <button class="btn block" id="rcClose">סגירה</button>
-        <button class="btn primary block" id="rcShare">שיתוף הקבלה</button>
+        ${hasReceipt ? `<button class="btn primary block" id="rcShare">שיתוף הקבלה</button>` : ''}
       </div>
+      <button class="btn danger sm block mt" id="rcDelete">מחיקת הרשומה הזו</button>
     `);
     el.querySelector('#rcClose').onclick = UI.closeModal;
-    el.querySelector('#rcShare').onclick = async () => {
+    const shareBtn = el.querySelector('#rcShare');
+    if (shareBtn) shareBtn.onclick = async () => {
       if (navigator.share) {
         try { await navigator.share({ text: shareText }); }
         catch (e) { /* המשתמש ביטל את השיתוף */ }
@@ -436,6 +453,14 @@ const Views = (() => {
         await navigator.clipboard.writeText(shareText);
         UI.toast('הקבלה הועתקה — אפשר להדביק ולשלוח', 'ok');
       }
+    };
+    el.querySelector('#rcDelete').onclick = () => {
+      UI.confirmDialog('מחיקת רשומה', 'למחוק את רשומת האסיפה הזו לצמיתות? פעולה זו לא ניתנת לביטול.', () => {
+        Store.deleteCollection(c.id);
+        UI.closeModal();
+        UI.toast('הרשומה נמחקה');
+        App.rerender();
+      });
     };
   }
 
@@ -446,8 +471,8 @@ const Views = (() => {
     if (holderNav) holderNav.addEventListener('click', () => location.hash = '#/holders/' + b.holder_id);
     root.querySelector('#boxCollectBtn').addEventListener('click', () => Forms.openCollectionForm(id));
     root.querySelector('#boxEditBtn').addEventListener('click', () => Forms.openBoxForm(b));
-    root.querySelectorAll('[data-receipt]').forEach(li => {
-      li.addEventListener('click', () => openReceiptView(li.dataset.receipt));
+    root.querySelectorAll('[data-entry]').forEach(li => {
+      li.addEventListener('click', () => openHistoryEntryView(li.dataset.entry));
     });
     root.querySelector('#boxDeleteBtn').addEventListener('click', () => {
       UI.confirmDialog('מחיקת קופה', `למחוק את קופה ${b.serial}? היסטוריית האסיפות תישמר.`, () => {
@@ -479,13 +504,13 @@ const Views = (() => {
       </li>`).join('');
 
     const histItems = history.slice(0, 15).map(c => {
-      const clickable = c.outcome === 'collected' && c.receipt_number;
+      const hasReceipt = c.outcome === 'collected' && c.receipt_number;
       return `
-      <li class="${clickable ? '' : 'nolink'}" ${clickable ? `data-receipt="${c.id}"` : ''}>
+      <li data-entry="${c.id}">
         <div class="avatar ${c.outcome === 'collected' ? 'ok' : ''}">${fmtDateShort(c.date)}</div>
         <div class="li-main">
           <div class="li-title">${c.outcome === 'collected' ? fmtMoney(c.amount) : (c.outcome === 'no_answer' ? 'לא היו בבית' : c.outcome === 'refused' ? 'סירבו' : 'ריקה')}</div>
-          <div class="li-sub">${clickable ? `קבלה מס' ${c.receipt_number}` : fmtDate(c.date)}</div>
+          <div class="li-sub">${hasReceipt ? `קבלה מס' ${c.receipt_number}` : fmtDate(c.date)}</div>
         </div>
       </li>`;
     }).join('');
@@ -530,8 +555,8 @@ const Views = (() => {
     root.querySelectorAll('.list li[data-id]').forEach(li => {
       li.addEventListener('click', () => location.hash = '#/boxes/' + li.dataset.id);
     });
-    root.querySelectorAll('[data-receipt]').forEach(li => {
-      li.addEventListener('click', () => openReceiptView(li.dataset.receipt));
+    root.querySelectorAll('[data-entry]').forEach(li => {
+      li.addEventListener('click', () => openHistoryEntryView(li.dataset.entry));
     });
     root.querySelector('#holderEditBtn').addEventListener('click', () => Forms.openHolderForm(h));
     root.querySelector('#holderAddBoxBtn').addEventListener('click', () => Forms.openBoxForm(null, h.id));
