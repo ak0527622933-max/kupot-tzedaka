@@ -593,7 +593,7 @@ const Views = (() => {
       <div class="card card-pad">
         <div class="field">
           <label>שם הארגון / הקופה המרכזית</label>
-          <input type="text" id="setOrgName" value="${esc(s.orgName)}" placeholder="לדוגמה: קרן עזרה וחסד">
+          <textarea id="setOrgName" placeholder="לדוגמה: קרן עזרה וחסד" style="min-height:44px">${esc(s.orgName)}</textarea>
         </div>
         <div class="field-row">
           <div class="field">

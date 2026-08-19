@@ -4,7 +4,7 @@
    את קבצי האפליקציה עצמם כדי שהיא תיפתח גם בלי אינטרנט.
    ========================================================== */
 
-const CACHE_NAME = 'kupot-cache-v2';
+const CACHE_NAME = 'kupot-cache-v3';
 const ASSETS = [
   './',
   './index.html',

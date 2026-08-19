@@ -99,9 +99,21 @@ const App = (() => {
   }
 
   function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
+    if (!('serviceWorker' in navigator)) return;
+
+    // כשגרסה חדשה של האפליקציה נכנסת לתוקף ברקע, מרעננים את הדף
+    // פעם אחת לבד — כך שאף אחד לא צריך לזכור לעשות רענון קשה ידני
+    let reloadedForUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloadedForUpdate) return;
+      reloadedForUpdate = true;
+      location.reload();
+    });
+
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // בודקים מיד אם יש גרסה חדשה זמינה, לא רק מחכים לבדיקה הבאה של הדפדפן
+      reg.update().catch(() => {});
+    }).catch(() => {});
   }
 
   return { init, render, rerender, currentRoute };
