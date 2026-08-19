@@ -138,8 +138,18 @@ const Sync = (() => {
 
     function mergeField(localKey, tsKey, remoteValKey, remoteTsKey, fallback) {
       if (!r) return;
+      const remoteHasValue = r[remoteValKey] !== null && r[remoteValKey] !== undefined && r[remoteValKey] !== '';
+      const localHasValue = s[localKey] !== null && s[localKey] !== undefined && s[localKey] !== '';
+      // אם לאף צד אין תאריך אמיתי (נתון ישן שקדם למנגנון הזה), לא
+      // "מנצחים" לפי זמן — פשוט מאמצים את הערך הקיים בענן אם יש כזה
+      // ולמכשיר הזה עדיין אין כלום מקומית
+      const bothTimestampsMissing = !r[remoteTsKey] && !s[tsKey];
+      if (bothTimestampsMissing) {
+        if (remoteHasValue && !localHasValue) { s[localKey] = r[remoteValKey]; changed = true; }
+        return;
+      }
       if (isNewer(r[remoteTsKey], s[tsKey])) {
-        s[localKey] = (r[remoteValKey] !== null && r[remoteValKey] !== undefined) ? r[remoteValKey] : fallback;
+        s[localKey] = remoteHasValue ? r[remoteValKey] : fallback;
         s[tsKey] = r[remoteTsKey];
         changed = true;
       }
@@ -148,19 +158,22 @@ const Sync = (() => {
     mergeField('currency', 'currencyUpdatedAt', 'currency', 'currency_updated_at', '₪');
     mergeField('reminderDays', 'reminderDaysUpdatedAt', 'reminder_days', 'reminder_days_updated_at', 90);
 
-    await req('/rest/v1/app_settings?on_conflict=id', {
-      method: 'POST',
-      prefer: 'resolution=merge-duplicates,return=minimal',
-      body: JSON.stringify([{
-        id: 'main',
-        org_name: s.orgName,
-        currency: s.currency,
-        reminder_days: s.reminderDays,
-        org_name_updated_at: s.orgNameUpdatedAt,
-        currency_updated_at: s.currencyUpdatedAt,
-        reminder_days_updated_at: s.reminderDaysUpdatedAt
-      }])
-    });
+    // דוחפים שדה רק אם המכשיר הזה אי-פעם נגע בו בפועל (יש לו תאריך
+    // מקומי אמיתי). אחרת מכשיר ש"לא יודע" כלום על השדה הזה (למשל
+    // מכשיר טרי, או שדה שמעולם לא נערך דרכו) עלול לדרוס בטעות ערך
+    // אמיתי בענן עם ערך ריק/ברירת-מחדל מקומי
+    const payload = { id: 'main' };
+    if (s.orgNameUpdatedAt) { payload.org_name = s.orgName; payload.org_name_updated_at = s.orgNameUpdatedAt; }
+    if (s.currencyUpdatedAt) { payload.currency = s.currency; payload.currency_updated_at = s.currencyUpdatedAt; }
+    if (s.reminderDaysUpdatedAt) { payload.reminder_days = s.reminderDays; payload.reminder_days_updated_at = s.reminderDaysUpdatedAt; }
+
+    if (Object.keys(payload).length > 1) {
+      await req('/rest/v1/app_settings?on_conflict=id', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        body: JSON.stringify([payload])
+      });
+    }
     return changed;
   }
 
