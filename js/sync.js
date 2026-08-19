@@ -97,21 +97,6 @@ const Sync = (() => {
         body: JSON.stringify(rows)
       });
     }
-    // הגדרות כלליות (שם ארגון, מטבע, ימי תזכורת) — שורה בודדת משותפת
-    const s = db.settings;
-    if (s.settingsUpdatedAt) {
-      await req('/rest/v1/app_settings?on_conflict=id', {
-        method: 'POST',
-        prefer: 'resolution=merge-duplicates,return=minimal',
-        body: JSON.stringify([{
-          id: 'main',
-          org_name: s.orgName,
-          currency: s.currency,
-          reminder_days: s.reminderDays,
-          updated_at: s.settingsUpdatedAt
-        }])
-      });
-    }
     db.meta.lastPush = Store.nowISO();
   }
 
@@ -136,21 +121,46 @@ const Sync = (() => {
         }
       }
     }
+    db.meta.lastPull = Store.nowISO();
+    return changed;
+  }
 
-    // מיזוג הגדרות כלליות משותפות
-    const remoteSettings = await req('/rest/v1/app_settings?id=eq.main&select=*');
-    if (Array.isArray(remoteSettings) && remoteSettings[0]) {
-      const r = remoteSettings[0];
-      if (isNewer(r.updated_at, db.settings.settingsUpdatedAt)) {
-        db.settings.orgName = r.org_name || '';
-        db.settings.currency = r.currency || '₪';
-        db.settings.reminderDays = r.reminder_days || 90;
-        db.settings.settingsUpdatedAt = r.updated_at;
+  /** מסנכרן את הגדרות הארגון (שם/מטבע/ימי תזכורת) ברמת שדה בודד:
+   * קודם מושכים את המצב בענן, לוקחים לכל שדה בנפרד את הגרסה העדכנית
+   * יותר (מקומי מול ענן), ורק אז דוחפים את התוצאה הממוזגת בחזרה —
+   * כך שדה שנערך במכשיר אחד לעולם לא דורס שדה אחר שנערך במכשיר אחר */
+  async function syncSettings() {
+    if (!isConfigured()) return false;
+    const s = Store.data().settings;
+    const rows = await req('/rest/v1/app_settings?id=eq.main&select=*');
+    const r = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    let changed = false;
+
+    function mergeField(localKey, tsKey, remoteValKey, remoteTsKey, fallback) {
+      if (!r) return;
+      if (isNewer(r[remoteTsKey], s[tsKey])) {
+        s[localKey] = (r[remoteValKey] !== null && r[remoteValKey] !== undefined) ? r[remoteValKey] : fallback;
+        s[tsKey] = r[remoteTsKey];
         changed = true;
       }
     }
+    mergeField('orgName', 'orgNameUpdatedAt', 'org_name', 'org_name_updated_at', '');
+    mergeField('currency', 'currencyUpdatedAt', 'currency', 'currency_updated_at', '₪');
+    mergeField('reminderDays', 'reminderDaysUpdatedAt', 'reminder_days', 'reminder_days_updated_at', 90);
 
-    db.meta.lastPull = Store.nowISO();
+    await req('/rest/v1/app_settings?on_conflict=id', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: JSON.stringify([{
+        id: 'main',
+        org_name: s.orgName,
+        currency: s.currency,
+        reminder_days: s.reminderDays,
+        org_name_updated_at: s.orgNameUpdatedAt,
+        currency_updated_at: s.currencyUpdatedAt,
+        reminder_days_updated_at: s.reminderDaysUpdatedAt
+      }])
+    });
     return changed;
   }
 
@@ -159,7 +169,9 @@ const Sync = (() => {
     setStatus('syncing');
     try {
       await push();
-      const changed = await pull();
+      const changedData = await pull();
+      const changedSettings = await syncSettings();
+      const changed = changedData || changedSettings;
       localStorage.setItem('kupot_db_v1', JSON.stringify(Store.data()));
       setStatus('ok');
       if (changed && window.App) App.rerender();

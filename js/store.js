@@ -26,7 +26,11 @@ const Store = (() => {
       },
       deviceName: '',
       lastBackupExport: null,
-      settingsUpdatedAt: null // תאריך עדכון אחרון של שם הארגון/מטבע/ימי תזכורת, לצורך סנכרון
+      // תאריך עדכון אחרון לכל שדה בנפרד — כדי שעריכת שדה אחד במכשיר
+      // אחד לא תדרוס בטעות שדה אחר שעודכן לאחרונה במכשיר אחר
+      orgNameUpdatedAt: null,
+      currencyUpdatedAt: null,
+      reminderDaysUpdatedAt: null
     },
     meta: { lastPull: null, lastPush: null }
   };
@@ -139,9 +143,11 @@ const Store = (() => {
     save();
   }
 
-  /** מסמן ששם הארגון/מטבע/ימי תזכורת השתנו, כדי ש-sync.js ידע לדחוף אותם */
-  function touchOrgSettings() {
-    db.settings.settingsUpdatedAt = nowISO();
+  /** מסמן ששדה הגדרה מסוים (שם ארגון / מטבע / ימי תזכורת) השתנה עכשיו,
+   * כדי ש-sync.js ימזג נכון בין מכשירים ברמת שדה בודד ולא ידרוס שדות אחרים */
+  function touchSettingsField(field) {
+    const key = field + 'UpdatedAt';
+    if (key in db.settings) db.settings[key] = nowISO();
     save();
   }
 
@@ -477,6 +483,6 @@ const Store = (() => {
     collections, collectionsFor, collectionsForHolder, saveCollection, deleteCollection,
     lastCollectionDate, daysSince, dueBoxes, totalBetween, monthlyTotals, unsettledByCollector,
     exportJSON, importJSON, exportCSV, resetAll, seedDemo,
-    daysSinceBackup, markBackupExported, touchOrgSettings
+    daysSinceBackup, markBackupExported, touchSettingsField
   };
 })();

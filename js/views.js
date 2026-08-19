@@ -727,10 +727,16 @@ const Views = (() => {
     const s = Store.data().settings;
 
     root.querySelector('#saveSettingsBtn').addEventListener('click', () => {
-      s.orgName = root.querySelector('#setOrgName').value.trim();
-      s.currency = root.querySelector('#setCurrency').value.trim() || '₪';
-      s.reminderDays = Number(root.querySelector('#setReminder').value) || 90;
-      Store.touchOrgSettings();
+      const newOrgName = root.querySelector('#setOrgName').value.trim();
+      const newCurrency = root.querySelector('#setCurrency').value.trim() || '₪';
+      const newReminder = Number(root.querySelector('#setReminder').value) || 90;
+
+      // מסמנים רק את השדות שבאמת השתנו, כדי לא לדרוס בטעות ערך
+      // עדכני יותר של שדה אחר שהגיע ממכשיר אחר
+      if (newOrgName !== s.orgName) { s.orgName = newOrgName; Store.touchSettingsField('orgName'); }
+      if (newCurrency !== s.currency) { s.currency = newCurrency; Store.touchSettingsField('currency'); }
+      if (newReminder !== s.reminderDays) { s.reminderDays = newReminder; Store.touchSettingsField('reminderDays'); }
+
       UI.toast('ההגדרות נשמרו', 'ok');
     });
 
