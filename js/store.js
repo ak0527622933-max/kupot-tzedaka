@@ -19,7 +19,6 @@ const Store = (() => {
       orgName: '',
       currency: '₪',
       reminderDays: 90,     // אחרי כמה ימים קופה נחשבת "ממתינה"
-      nextReceipt: 1,
       cloud: {
         url: 'https://mnkjgugztrqqfxxqajne.supabase.co',
         key: 'sb_publishable_0MdNfJbh-fYiGOUgovHbQg_3UpYX6Oe',
@@ -276,9 +275,8 @@ const Store = (() => {
 
   function saveCollection(input) {
     let c = input.id ? db.collections.find(x => x.id === input.id) : null;
-    const isNew = !c;
     if (!c) {
-      c = { id: uid(), created_at: nowISO() };
+      c = { id: uid(), created_at: nowISO(), receipt_number: null };
       db.collections.push(c);
     }
     Object.assign(c, {
@@ -287,16 +285,13 @@ const Store = (() => {
       date: input.date || today(),
       amount: Number(input.amount) || 0,
       outcome: input.outcome || 'collected', // collected | no_answer | refused | empty
-      receipt_number: input.receipt_number || null,
       notes: (input.notes || '').trim(),
       settled: !!input.settled,           // האם הכסף הועבר לקופה המרכזית
       deleted: !!input.deleted,
       updated_at: nowISO()
     });
-    if (isNew && input.issueReceipt) {
-      c.receipt_number = db.settings.nextReceipt;
-      db.settings.nextReceipt = (db.settings.nextReceipt || 1) + 1;
-    }
+    // מספר קבלה מונפק אוטומטית ע"י sync.js בסנכרון הבא (כדי שיהיה
+    // ייחודי בין כל המכשירים, ולא רק "מקומי" לכל מכשיר בנפרד)
     save();
     return c;
   }

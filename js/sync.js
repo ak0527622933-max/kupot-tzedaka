@@ -63,10 +63,31 @@ const Sync = (() => {
     return ta > tb;
   }
 
+  /** מנפיק מספרי קבלה לאסיפות שנאסף בהן כסף ועדיין אין להן מספר —
+   * דרך פונקציה אטומית בשרת, כדי שלא ייווצרו מספרים כפולים כשכמה
+   * מכשירים מנפיקים קבלות במקביל */
+  async function issuePendingReceipts() {
+    const db = Store.data();
+    const pending = db.collections.filter(c => !c.deleted && c.outcome === 'collected' && !c.receipt_number);
+    for (const c of pending) {
+      try {
+        const n = await req('/rest/v1/rpc/issue_receipt_number', { method: 'POST', body: JSON.stringify({}) });
+        if (typeof n === 'number') {
+          c.receipt_number = n;
+          c.updated_at = Store.nowISO();
+        }
+      } catch (e) {
+        console.error('שגיאה בהנפקת מספר קבלה', e);
+      }
+    }
+    if (pending.length) Store.save();
+  }
+
   /** דוחף רשומות מקומיות שהשתנו מאז lastPush */
   async function push() {
     if (!isConfigured()) return;
     const db = Store.data();
+    await issuePendingReceipts();
     for (const t of TABLES) {
       const rows = db[t];
       if (!rows.length) continue;

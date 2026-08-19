@@ -230,10 +230,7 @@ const Forms = (() => {
         <textarea id="fNotes" placeholder="אופציונלי"></textarea>
       </div>
 
-      <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;margin-bottom:14px" id="receiptWrap">
-        <input type="checkbox" id="fReceipt" style="width:18px;height:18px">
-        <span>הנפקת קבלה למחזיק</span>
-      </label>
+      <p class="hint" id="receiptHint" style="margin:-6px 0 14px">קבלה תונפק אוטומטית לאסיפה הזו</p>
 
       <div class="btn-row">
         <button class="btn block" id="fCancel">ביטול</button>
@@ -244,13 +241,13 @@ const Forms = (() => {
     let outcome = 'collected';
     const amountWrap = el.querySelector('#amountWrap');
     const collectorWrap = el.querySelector('#collectorWrap');
-    const receiptWrap = el.querySelector('#receiptWrap');
 
+    const receiptHint = el.querySelector('#receiptHint');
     function syncVisibility() {
       const isMoney = outcome === 'collected';
       amountWrap.style.display = isMoney ? '' : 'none';
       collectorWrap.style.display = isMoney ? '' : 'none';
-      receiptWrap.style.display = isMoney ? '' : 'none';
+      receiptHint.style.display = isMoney ? '' : 'none';
     }
     syncVisibility();
 
@@ -276,8 +273,7 @@ const Forms = (() => {
         date: el.querySelector('#fDate').value || Store.today(),
         amount: outcome === 'collected' ? amount : 0,
         outcome,
-        notes: el.querySelector('#fNotes').value,
-        issueReceipt: outcome === 'collected' && el.querySelector('#fReceipt').checked
+        notes: el.querySelector('#fNotes').value
       });
       UI.closeModal();
       UI.toast('האסיפה נרשמה', 'ok');
